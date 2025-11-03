@@ -6,7 +6,6 @@ import { prisma } from '../prisma';
 import { auth, requireAdmin } from '../middleware/auth';
 import { makePasswordSig } from '../utils/password';
 
-
 const router = Router();
 
 const loginSchema = z.object({
@@ -14,9 +13,7 @@ const loginSchema = z.object({
   password: z.string().min(6),
 });
 
-// ✅ إلغاء التسجيل المفتوح (احذفه نهائيًا أو علّق عليه)
-// router.post('/register', ...)
-
+// ✅ تسجيل الدخول
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
@@ -31,8 +28,14 @@ router.post('/login', async (req, res, next) => {
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-  } catch (e) { next(e); }
+
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    });
+  } catch (e) {
+    next(e);
+  }
 });
 
 // ✅ معلومات المستخدم الحالي
@@ -40,19 +43,21 @@ router.get('/me', auth, async (req, res, next) => {
   try {
     const me = await prisma.user.findUnique({
       where: { id: (req as any).user.id },
-      select: { id: true, name: true, email: true, role: true, createdAt: true }
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
     if (!me) return res.status(404).json({ error: 'Not found' });
     res.json(me);
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
-// ✅ إنشاء مستخدم بواسطة الأدمن فقط
+// ✅ إنشاء مستخدم جديد من الأدمن فقط
 const adminCreateSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(['admin','user']).optional().default('user')
+  role: z.enum(['admin', 'user']).optional().default('user'),
 });
 
 router.post('/admin/users', auth, requireAdmin, async (req, res, next) => {
@@ -64,22 +69,29 @@ router.post('/admin/users', auth, requireAdmin, async (req, res, next) => {
 
     const rounds = Number(process.env.BCRYPT_COST ?? 10);
     const hashed = await bcrypt.hash(password, rounds);
-    const sig = makePasswordSig(password);   // 👈 NEW
+    const sig = makePasswordSig(password); // ✅ توليد بصمة كلمة السر
 
     const created = await prisma.user.create({
       data: {
         name: name ?? email.split('@')[0],
         email,
         password: hashed,
-        passwordSig: sig,                    // 👈 NEW (مطلوب من Prisma)
-        role
+        passwordSig: sig, // ✅ الإضافة المطلوبة
+        role,
       },
-      select: { id: true, name: true, email: true, role: true, createdAt: true }
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
     });
 
     res.status(201).json(created);
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
-
 
 export default router;
