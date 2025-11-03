@@ -33,8 +33,21 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/ai', aiRouter);                       // ← NEW
 
+// Health check for frontend
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    apiUrl: process.env.PUBLIC_API_URL ?? 'http://localhost:4000/api',
+    checkedAt: new Date().toISOString(),
+    message: 'Connected'
+  });
+});
+
+
 // Global error handler
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT ?? 4001);
 app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+
+

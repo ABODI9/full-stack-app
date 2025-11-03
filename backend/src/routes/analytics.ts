@@ -76,7 +76,7 @@ router.post('/admin/users', auth, requireAdmin, async (req, res, next) => {
         name: name ?? email.split('@')[0],
         email,
         password: hashed,
-        passwordSig: sig, // ✅ الإضافة المطلوبة
+        passwordSig: sig, // ✅ لازم حسب Prisma schema
         role,
       },
       select: {
